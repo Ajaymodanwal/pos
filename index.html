@@ -3,221 +3,385 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kishori Lal PRO</title>
+    <title>Kishori Lal POS</title>
     
     <link rel="icon" type="image/jpg" href="27893.jpg">
-    <link rel="apple-touch-icon" href="27893.jpg">
     <meta name="theme-color" content="#166534">
-
-    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Kishori%20Lal%20PRO%22,%22short_name%22:%22KL%20PRO%22,%22start_url%22:%22index.html%22,%22display%22:%22standalone%22,%22background_color%22:%22#ffffff%22,%22theme_color%22:%22#166534%22,%22icons%22:[{%22src%22:%2227893.jpg%22,%22sizes%22:%22512x512%22,%22type%22:%22image/jpg%22}]}">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;900&display=swap');
         body { font-family: 'Outfit', sans-serif; background: #f0fdf4; }
         .mode-btn.active { background: #166534 !important; color: white !important; transform: scale(1.05); }
         .nav-btn.active-nav { color: #166534; border-bottom: 3px solid #166534; }
-        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
-        @keyframes grow { from { width: 0; } to { width: var(--w); } }
-        .progress-bar { height: 12px; border-radius: 6px; animation: grow 1.5s ease-out forwards; }
-        @media print { .no-print { display: none !important; } #receipt { display: block !important; width: 58mm; padding: 2mm; } }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .progress-bar { height: 10px; border-radius: 5px; transition: width 1s ease; }
+        
+        /* --- THERMAL PRINTER SETTINGS --- */
+        @media print { 
+            @page { margin: 0; size: 58mm auto; } 
+            body { margin: 0; padding: 0; background: white; }
+            .no-print { display: none !important; } 
+            #receipt { display: block !important; width: 100%; padding: 5px; font-family: monospace; font-size: 12px; } 
+            #view-billing, header, .glass { display: none; }
+        }
         #receipt { display: none; }
+        
+        /* Modal Animation */
+        .modal { transition: opacity 0.3s ease; }
+        .modal-content { transform: scale(0.9); transition: transform 0.3s ease; }
+        .modal.open { opacity: 1; pointer-events: auto; }
+        .modal.open .modal-content { transform: scale(1); }
     </style>
 </head>
-<body class="flex flex-col h-screen overflow-hidden">
+<body class="flex flex-col h-screen overflow-hidden text-gray-800">
 
-    <header class="bg-white p-4 flex justify-between items-center shadow-md no-print shrink-0">
+    <header class="bg-white p-3 flex justify-between items-center shadow-md no-print shrink-0 z-10">
         <div class="flex items-center gap-2">
-            <img src="27893.jpg" class="h-10 w-10 rounded-full border-2 border-green-600">
+            <div class="h-10 w-10 rounded-full border-2 border-green-600 bg-green-100 flex items-center justify-center overflow-hidden">
+                <img src="27893.jpg" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3081/3081967.png'" class="h-full w-full object-cover">
+            </div>
             <div>
-                <h1 class="text-sm font-black text-green-900 leading-none">Kishori Lal PRO</h1>
-                <p class="text-[8px] font-bold text-green-600 uppercase tracking-tighter">Best Sweet House</p>
+                <h1 class="text-sm font-black text-green-900 leading-none">Kishori Lal POS</h1>
+                <p class="text-[9px] font-bold text-green-600 uppercase tracking-tighter">Phoolpur Azamgarh</p>
             </div>
         </div>
-        <div class="flex gap-4 overflow-x-auto no-scrollbar pb-1">
-            <button onclick="tab('billing')" id="nav-billing" class="nav-btn active-nav flex flex-col items-center text-[9px] font-bold shrink-0"><i class="fa-solid fa-calculator text-lg"></i>BILLS</button>
-            <button onclick="tab('report')" id="nav-report" class="nav-btn flex flex-col items-center text-[9px] font-bold text-gray-400 shrink-0"><i class="fa-solid fa-chart-pie text-lg"></i>REPORTS</button>
-            <button onclick="tab('history')" id="nav-history" class="nav-btn flex flex-col items-center text-[9px] font-bold text-gray-400 shrink-0"><i class="fa-solid fa-list-check text-lg"></i>HISTORY</button>
-            <button onclick="tab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center text-[9px] font-bold text-gray-400 shrink-0"><i class="fa-solid fa-pen-to-square text-lg text-green-700"></i>EDIT</button>
+        <div class="flex gap-4">
+            <button onclick="tab('billing')" id="nav-billing" class="nav-btn active-nav flex flex-col items-center text-[9px] font-bold shrink-0"><i class="fa-solid fa-calculator text-lg mb-1"></i>BILL</button>
+            <button onclick="tab('report')" id="nav-report" class="nav-btn flex flex-col items-center text-[9px] font-bold text-gray-400 shrink-0"><i class="fa-solid fa-chart-pie text-lg mb-1"></i>REPORT</button>
+            <button onclick="tab('history')" id="nav-history" class="nav-btn flex flex-col items-center text-[9px] font-bold text-gray-400 shrink-0"><i class="fa-solid fa-clock-rotate-left text-lg mb-1"></i>HISTORY</button>
+            <button onclick="tab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center text-[9px] font-bold text-gray-400 shrink-0"><i class="fa-solid fa-bars text-lg mb-1"></i>MENU</button>
         </div>
     </header>
 
-    <main id="view-billing" class="flex-1 overflow-y-auto p-4 no-print pb-80">
-        <div id="grid" class="grid grid-cols-2 gap-3 mb-4"></div>
-        <div class="fixed bottom-0 left-0 right-0 glass p-5 border-t-4 border-green-800 shadow-2xl z-50 rounded-t-[35px]">
+    <main id="view-billing" class="flex-1 overflow-y-auto p-3 no-print pb-80">
+        
+        <button onclick="openCustom('Manual Item', 0)" class="w-full bg-green-50 text-green-800 py-3 rounded-2xl font-black uppercase text-xs mb-4 border border-green-200 shadow-sm flex justify-center items-center gap-2">
+            <i class="fa-solid fa-plus-circle"></i> Add Custom Item / Weight
+        </button>
+
+        <div id="grid" class="grid grid-cols-2 gap-3 mb-20"></div>
+
+        <div id="custom-modal" class="modal fixed inset-0 z-[60] bg-black/80 hidden flex items-center justify-center opacity-0 pointer-events-none p-4">
+            <div class="modal-content bg-white w-full max-w-sm rounded-[30px] p-6 text-center relative shadow-2xl">
+                <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 text-xl"><i class="fa-solid fa-times"></i></button>
+                <h3 class="text-sm font-bold text-gray-400 uppercase mb-1">Add Item</h3>
+                <input type="text" id="m-name-input" class="text-xl font-black text-green-900 uppercase mb-4 text-center w-full border-b-2 border-green-100 outline-none pb-2" placeholder="Item Name">
+                <p class="text-xs font-bold text-gray-500 mb-6">Rate: ₹<span id="m-rate">0</span>/kg</p>
+                <div class="flex gap-3 mb-6">
+                    <div class="flex-1">
+                        <label class="text-[10px] font-black uppercase text-green-700 block mb-1">Weight (Grams)</label>
+                        <input type="number" id="inp-weight" oninput="calcByWeight()" placeholder="250" class="w-full p-4 bg-green-50 rounded-2xl font-black text-xl text-center border-2 border-green-200 outline-none">
+                    </div>
+                    <div class="flex items-center pt-4 text-gray-400"><i class="fa-solid fa-right-left"></i></div>
+                    <div class="flex-1">
+                        <label class="text-[10px] font-black uppercase text-green-700 block mb-1">Price (₹)</label>
+                        <input type="number" id="inp-price" oninput="calcByPrice()" placeholder="50" class="w-full p-4 bg-green-50 rounded-2xl font-black text-xl text-center border-2 border-green-200 outline-none">
+                    </div>
+                </div>
+                <button onclick="addCustomToCart()" class="w-full bg-green-700 text-white py-4 rounded-2xl font-black uppercase text-lg shadow-lg">Add to Bill</button>
+            </div>
+        </div>
+
+        <div class="fixed bottom-0 left-0 right-0 glass p-5 border-t-4 border-green-800 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-40 rounded-t-[35px]">
+            <div class="flex gap-2 mb-2">
+                <input type="text" id="c-name" placeholder="Customer Name" class="w-1/2 p-3 border-2 rounded-2xl text-xs font-bold bg-white outline-none">
+                <input type="number" id="c-mob" placeholder="WhatsApp No" class="w-1/2 p-3 border-2 rounded-2xl text-xs font-bold bg-white outline-none">
+            </div>
+
             <div class="flex gap-2 mb-3">
-                <input type="text" id="c-name" placeholder="Customer Name" class="w-1/2 p-3 border-2 rounded-2xl text-xs font-bold bg-green-50 focus:border-green-600 outline-none">
-                <input type="number" id="c-mob" placeholder="WhatsApp No" class="w-1/2 p-3 border-2 rounded-2xl text-xs font-bold bg-green-50 focus:border-green-600 outline-none">
+                <div class="flex-1 relative">
+                     <label class="text-[9px] font-black uppercase text-green-800 ml-2">Discount (₹)</label>
+                     <input type="number" id="c-discount" oninput="updateCartUI()" placeholder="0" class="w-full p-2 border-2 border-orange-200 bg-orange-50 rounded-xl text-sm font-black text-orange-800 outline-none">
+                </div>
+                <div class="flex-[2] flex gap-1 items-end">
+                    <button onclick="setMode('Cash')" class="mode-btn active flex-1 border-2 border-green-800 bg-white py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">Cash</button>
+                    <button onclick="setMode('Online')" class="mode-btn flex-1 border-2 border-green-800 bg-white py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">Online</button>
+                    <button onclick="setMode('Due')" class="mode-btn flex-1 border-2 border-red-800 bg-white py-2 rounded-xl text-[9px] font-black text-red-700 uppercase tracking-widest transition-all">Due</button>
+                </div>
             </div>
-            <div class="flex gap-2 mb-4">
-                <button onclick="setMode('Cash')" class="mode-btn active flex-1 border-2 border-green-800 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Cash</button>
-                <button onclick="setMode('Online')" class="mode-btn flex-1 border-2 border-green-800 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Online</button>
-                <button onclick="setMode('Due')" class="mode-btn flex-1 border-2 border-red-800 py-3 rounded-2xl text-[10px] font-black text-red-700 uppercase tracking-widest transition-all">Due</button>
-            </div>
-            <div class="flex justify-between items-center px-1">
-                <div class="flex flex-col"><span class="text-[10px] font-black text-gray-400 uppercase">Total Bill</span><span id="total-val" class="text-4xl font-black text-green-900">₹0</span></div>
-                <button onclick="processBill()" class="bg-green-700 text-white px-10 py-5 rounded-[25px] font-black shadow-lg text-sm active:scale-95 transition-all">PRINT & SEND</button>
+
+            <div class="flex justify-between items-center px-2">
+                <div class="flex flex-col cursor-pointer" onclick="showCartDetails()">
+                    <span class="text-[10px] font-black text-gray-400 uppercase mb-1">Items: <span id="cart-count">0</span> (View)</span>
+                    <span id="total-val" class="text-4xl font-black text-green-900 leading-none">₹0</span>
+                </div>
+                <button onclick="processBill()" class="bg-green-700 text-white px-6 py-4 rounded-[25px] font-black shadow-lg text-xs active:scale-95 transition-all flex items-center gap-2">
+                    <i class="fa-brands fa-whatsapp text-lg"></i> PRINT & SEND
+                </button>
             </div>
         </div>
     </main>
 
     <div id="view-report" class="hidden flex-1 p-6 no-print bg-white overflow-y-auto space-y-6">
         <div class="relative bg-green-50 p-8 rounded-[45px] text-center border-2 border-green-100 shadow-inner">
-            <p class="text-[10px] font-black text-green-600 uppercase tracking-[3px] mb-2">Total Daily Profit</p>
+            <p class="text-[10px] font-black text-green-600 uppercase tracking-[3px] mb-2">Net Profit</p>
             <h2 id="rep-profit" class="text-6xl font-black text-green-900 tracking-tighter">₹0</h2>
-            <div class="mt-4 inline-block px-4 py-1 bg-green-200 text-green-800 rounded-full text-[10px] font-black uppercase">Today's Performance</div>
         </div>
+
+        <div class="bg-red-50 p-5 rounded-3xl border-2 border-red-100">
+            <h3 class="text-xs font-black uppercase text-red-900 mb-2"><i class="fa-solid fa-wallet"></i> Add Expense</h3>
+            <div class="flex gap-2">
+                <input type="text" id="ex-note" placeholder="Reason (e.g. Milk)" class="flex-1 p-2 rounded-lg text-xs border outline-none">
+                <input type="number" id="ex-amt" placeholder="₹" class="w-16 p-2 rounded-lg text-xs border outline-none">
+                <button onclick="addEx()" class="bg-red-600 text-white px-3 rounded-lg font-bold">+</button>
+            </div>
+            <div class="mt-2 text-[10px] font-bold text-red-400">Total Expense: ₹<span id="rep-ex-total">0</span></div>
+        </div>
+
         <div class="space-y-4">
             <div class="bg-white p-5 rounded-3xl border shadow-sm">
                 <div class="flex justify-between items-center mb-2"><span class="text-xs font-black uppercase text-gray-500">Cash Sales</span><span id="rep-cash" class="text-sm font-black text-green-700">₹0</span></div>
-                <div class="w-full bg-gray-100 rounded-full h-3"><div id="bar-cash" class="progress-bar bg-green-600" style="--w: 0%"></div></div>
+                <div class="w-full bg-gray-100 rounded-full h-3"><div id="bar-cash" class="progress-bar bg-green-600" style="width: 0%"></div></div>
             </div>
             <div class="bg-white p-5 rounded-3xl border shadow-sm">
                 <div class="flex justify-between items-center mb-2"><span class="text-xs font-black uppercase text-gray-500">Online Sales</span><span id="rep-online" class="text-sm font-black text-blue-700">₹0</span></div>
-                <div class="w-full bg-gray-100 rounded-full h-3"><div id="bar-online" class="progress-bar bg-blue-600" style="--w: 0%"></div></div>
+                <div class="w-full bg-gray-100 rounded-full h-3"><div id="bar-online" class="progress-bar bg-blue-600" style="width: 0%"></div></div>
             </div>
-            <div class="bg-white p-5 rounded-3xl border shadow-sm">
-                <div class="flex justify-between items-center mb-2"><span class="text-xs font-black uppercase text-gray-500">Due (Udhaar)</span><span id="rep-due" class="text-sm font-black text-red-700">₹0</span></div>
-                <div class="w-full bg-gray-100 rounded-full h-3"><div id="bar-due" class="progress-bar bg-red-600" style="--w: 0%"></div></div>
-            </div>
-            <div class="bg-red-50 p-5 rounded-3xl border-2 border-red-100 flex justify-between items-center">
-                <div class="flex items-center gap-3"><i class="fa-solid fa-wallet text-red-600"></i><span class="text-xs font-black uppercase text-red-900">Expenses</span></div>
-                <span id="rep-ex" class="text-xl font-black text-red-700">₹0</span>
-            </div>
-        </div>
-        <div class="bg-gray-900 p-6 rounded-[35px] text-white">
-            <input type="text" id="ex-note" placeholder="Expense Reason" class="w-full bg-gray-800 p-3 rounded-xl mb-2 text-xs outline-none">
-            <div class="flex gap-2">
-                <input type="number" id="ex-amt" placeholder="Amount ₹" class="flex-1 bg-gray-800 p-3 rounded-xl text-xs outline-none">
-                <button onclick="addEx()" class="bg-green-600 px-6 rounded-xl font-black text-xs uppercase">Save</button>
-            </div>
+            <button onclick="clearHistory()" class="w-full p-4 bg-red-50 text-red-600 font-bold rounded-2xl text-xs uppercase border border-red-100">Reset All Data</button>
         </div>
     </div>
 
-    <div id="view-history" class="hidden flex-1 p-4 bg-white overflow-y-auto no-print">
-        <h2 class="text-lg font-black text-green-900 uppercase border-b-4 border-green-700 mb-4 inline-block">Transaction Log</h2>
-        <div id="history-list" class="space-y-3 pb-24"></div>
+    <div id="view-history" class="hidden flex-1 p-4 no-print bg-gray-50 overflow-y-auto pb-24">
+        <h2 class="text-xl font-black text-green-900 uppercase mb-4">Sales History</h2>
+        <div id="history-list" class="space-y-3"></div>
     </div>
 
     <div id="view-settings" class="hidden flex-1 p-6 no-print bg-white overflow-y-auto">
         <div class="bg-green-900 p-7 rounded-[40px] text-white shadow-xl mb-8">
-            <h2 class="text-xs font-black uppercase mb-4 tracking-widest text-green-200">System Management</h2>
-            <input type="text" id="n-name" placeholder="Item Name (e.g. Burfi)" class="w-full mb-3 p-4 rounded-2xl text-black font-black outline-none border-4 border-green-700">
+            <h2 class="text-xs font-black uppercase mb-4 tracking-widest text-green-200">Add New Sweet</h2>
+            <input type="text" id="n-name" placeholder="Item Name" class="w-full mb-3 p-4 rounded-2xl text-black font-black outline-none border-4 border-green-700">
             <input type="number" id="n-price" placeholder="Rate Per Kg (₹)" class="w-full mb-4 p-4 rounded-2xl text-black font-black outline-none border-4 border-green-700">
-            <button onclick="addItem()" class="w-full bg-green-500 text-black py-4 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all">Update Sweet Menu</button>
+            <button onclick="addNewItem()" class="w-full bg-green-500 text-black py-4 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all">Update Menu</button>
         </div>
         <div id="settings-list" class="space-y-2 pb-24 font-bold text-xs"></div>
     </div>
 
-    <div id="receipt" class="text-center text-black">
-        <h2 style="margin:0; font-size: 18px; font-weight: 900;">KISHORI LAL SWEET HOUSE</h2>
-        <p style="font-size: 8px; margin: 2px 0;">Phoolpur, Azamgarh | Ph: 9236800818</p>
-        <p id="r-dt" style="font-size: 9px; font-weight: 900; background: #eee; margin: 5px 0; padding: 2px;"></p>
-        <hr style="border-top: 1px dashed #000; margin: 5px 0;">
-        <div id="r-items" style="text-align: left; font-size: 11px; line-height: 1.5;"></div>
-        <hr style="border-top: 1px dashed #000; margin: 5px 0;">
-        <div style="font-weight: 900; font-size: 20px; display: flex; justify-content: space-between;"><span>GRAND TOTAL:</span><span id="r-total"></span></div>
-        <p id="r-mode" style="font-size: 10px; font-weight: 900; margin-top: 5px; text-transform: uppercase;"></p>
-        <center style="margin-top: 15px;">
-            <img src="27979.PNG" style="width: 140px; border: 1px solid #000; padding: 5px;">
+    <div id="receipt">
+        <center>
+            <h2 style="margin:0; font-size: 14px; font-weight: 900;">KISHORI LAL SWEET HOUSE</h2>
+            <p style="margin:0; font-size: 10px;">Phoolpur, Azamgarh</p>
+            <p style="margin:0; font-size: 10px;">Mo: 9236800818</p>
+            <p id="r-dt" style="font-size: 10px; margin: 5px 0; border-bottom: 1px dashed #000; padding-bottom:5px;"></p>
+        </center>
+        <table style="width: 100%; font-size: 11px; text-align: left;">
+            <thead><tr style="border-bottom: 1px dashed #000;"><th>Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Amt</th></tr></thead>
+            <tbody id="r-items"></tbody>
+        </table>
+        <div style="border-top: 1px dashed #000; margin-top: 5px; padding-top: 5px; font-size: 11px;">
+            <div style="display:flex; justify-content:space-between;"><span>Sub Total:</span><span id="r-sub"></span></div>
+            <div style="display:flex; justify-content:space-between;"><span>Discount:</span><span id="r-disc"></span></div>
+            <div style="display:flex; justify-content:space-between; font-weight:900; font-size:14px; margin-top:2px;"><span>TOTAL:</span><span id="r-total"></span></div>
+        </div>
+        <center style="margin-top: 10px;">
+            <p id="r-mode" style="font-size: 10px; font-weight: 900; text-transform: uppercase; border: 1px solid #000; display: inline-block; padding: 2px 5px;"></p>
+            <p style="font-size: 10px; margin-top: 5px;">* Thank You Visit Again *</p>
         </center>
     </div>
 
     <script>
-        let menu = JSON.parse(localStorage.getItem('kl_menu')) || [{id:1, name:"Kaala Jaam", price:240}, {id:2, name:"Khirmohan", price:240}, {id:3, name:"Burfi", price:280}];
-        let cart = [], payMode = 'Cash', history = JSON.parse(localStorage.getItem('kl_history')) || [], expenses = JSON.parse(localStorage.getItem('kl_expenses')) || [];
-
+        // --- DATA SETUP ---
+        let menu = JSON.parse(localStorage.getItem('kl_menu')) || [{id:1, name:"Kaju Katli", price:900}, {id:2, name:"Samosa", price:10}];
+        let cart = [], payMode = 'Cash', expenses = JSON.parse(localStorage.getItem('kl_expenses')) || [];
+        let history = JSON.parse(localStorage.getItem('kl_history_full')) || [];
+        
         function setMode(m) { payMode = m; document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active')); event.currentTarget.classList.add('active'); }
 
         function render() {
-            document.getElementById('grid').innerHTML = menu.map(i => `
-                <div class="bg-white rounded-[30px] p-3 border shadow-sm transition-all active:bg-green-50">
-                    <h3 class="text-[11px] font-black uppercase mb-2 truncate text-green-900">${i.name}</h3>
-                    <div class="grid grid-cols-2 gap-1 font-black text-[7px]">
-                        <button onclick="add('${i.name}', ${Math.round(i.price*0.25)}, '250g')" class="bg-green-50 py-2 rounded-xl border border-green-100">250G</button>
-                        <button onclick="add('${i.name}', ${Math.round(i.price*0.5)}, '500g')" class="bg-green-50 py-2 rounded-xl border border-green-100">500G</button>
-                        <button onclick="add('${i.name}', ${i.price}, '1kg')" class="bg-green-800 text-white py-2 rounded-xl">1KG</button>
-                        <button onclick="add('${i.name}', 20, '1 Pc')" class="bg-orange-600 text-white py-2 rounded-xl">1 PC</button>
+            // Grid with 1 Pc Option
+            document.getElementById('grid').innerHTML = menu.map(i => {
+                let isPiece = i.price < 100; 
+                return `
+                <div class="bg-white rounded-[20px] p-3 border shadow-sm transition-all">
+                    <div class="flex justify-between items-start mb-2">
+                        <div><h3 class="text-[12px] font-black uppercase text-green-900 leading-tight">${i.name}</h3><p class="text-[10px] text-gray-500 font-bold">₹${i.price}/${isPiece?'Pc':'Kg'}</p></div>
                     </div>
-                </div>`).join('');
+                    
+                    <div class="grid grid-cols-2 gap-1 font-black text-[8px]">
+                        ${isPiece ? 
+                        // PIECE ITEMS
+                        `<button onclick="add('${i.name}', ${i.price*1}, '1 Pc')" class="bg-green-50 py-2 rounded-xl border border-green-100 hover:bg-green-200">1 Pc</button>
+                         <button onclick="add('${i.name}', ${i.price*2}, '2 Pc')" class="bg-green-50 py-2 rounded-xl border border-green-100 hover:bg-green-200">2 Pc</button>
+                         <button onclick="add('${i.name}', ${i.price*5}, '5 Pc')" class="bg-green-50 py-2 rounded-xl border border-green-100 hover:bg-green-200">5 Pc</button>` 
+                        : 
+                        // WEIGHT ITEMS (With new 1 Pc button)
+                        `<button onclick="add('${i.name}', ${Math.round(i.price*0.25)}, '250g')" class="bg-green-50 py-2 rounded-xl border border-green-100 hover:bg-green-200">250g</button>
+                         <button onclick="add('${i.name}', ${Math.round(i.price*0.50)}, '500g')" class="bg-green-50 py-2 rounded-xl border border-green-100 hover:bg-green-200">500g</button>
+                         <button onclick="add('${i.name}', ${i.price}, '1kg')" class="bg-green-800 text-white py-2 rounded-xl">1KG</button>
+                         <button onclick="openCustom('${i.name} (1 Pc)', 0)" class="bg-orange-50 text-orange-700 border border-orange-200 py-2 rounded-xl">1 Pc</button>`
+                        }
+                        
+                        <button onclick="openCustom('${i.name}', ${i.price})" class="col-span-2 bg-gray-50 text-gray-600 border border-gray-200 py-2 rounded-xl flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-calculator"></i> Custom
+                        </button>
+                    </div>
+                </div>`
+            }).join('');
             
+            // Settings List
             document.getElementById('settings-list').innerHTML = menu.map(i => `
                 <div class="bg-gray-50 p-3 rounded-2xl flex justify-between items-center mb-1 border">
                     <span class="uppercase">${i.name} - ₹${i.price}</span>
-                    <button onclick="delItem(${i.id})" class="bg-red-100 text-red-600 p-2 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+                    <button onclick="delItem(${i.id})" class="bg-red-100 text-red-600 p-2 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
                 </div>`).join('');
-            updateUI();
-        }
-
-        function add(n, c, q) { cart.push({ name: n, cost: c, qty: q }); updateCart(); }
-        function updateCart() { document.getElementById('total-val').innerText = '₹' + cart.reduce((s, i) => s + i.cost, 0); }
-
-        function processBill() {
-            if(!cart.length) return alert("Select Items!");
-            const total = cart.reduce((s, i) => s + i.cost, 0);
-            const dt = new Date().toLocaleString('en-IN', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
-            const mob = document.getElementById('c-mob').value || "NA", name = document.getElementById('c-name').value || 'Customer';
             
-            history.unshift({ name, mob, total, mode: payMode, time: dt, items: cart.map(i => `${i.name}(${i.qty})`).join(', ') });
-            localStorage.setItem('kl_history', JSON.stringify(history));
-
-            document.getElementById('r-dt').innerText = dt;
-            document.getElementById('r-mode').innerText = "Mode: " + payMode;
-            document.getElementById('r-items').innerHTML = cart.map(i => `<div style="display:flex; justify-content:space-between"><span>${i.name}(${i.qty})</span><span>₹${i.cost}</span></div>`).join('');
-            document.getElementById('r-total').innerText = '₹' + total;
-
-            if(mob.length === 10) {
-                let itemsList = cart.map((i, idx) => `${idx+1}. *${i.name}* (${i.qty}) - ₹${i.cost}`).join('%0A');
-                let wa = `*KISHORI LAL SWEET HOUSE*%0A---%0A*Name:* ${name}%0A*Date:* ${dt}%0A---%0A${itemsList}%0A---%0A*GRAND TOTAL: ₹${total}*%0A*Mode:* ${payMode}%0A---%0A*Payment QR:* https://ajaymodanwal.github.io/kishorilalsweets/27979.PNG%0A---%0A_Best Sweet House_`;
-                window.open(`https://api.whatsapp.com/send?phone=91${mob}&text=${wa}`, '_blank');
-            }
-            setTimeout(() => { window.print(); cart = []; updateCart(); render(); }, 800);
+            updateCartUI(); renderHistory(); updateReports();
         }
 
-        function updateUI() {
-            const h = history, ex = expenses;
+        // --- CORE FUNCTIONS ---
+        function add(n, c, q) { cart.push({ name: n, cost: c, qty: q }); updateCartUI(); }
+        
+        function updateCartUI() { 
+            let subTotal = cart.reduce((s, i) => s + i.cost, 0);
+            let discount = parseFloat(document.getElementById('c-discount').value) || 0;
+            let finalTotal = subTotal - discount; if(finalTotal < 0) finalTotal = 0;
+
+            document.getElementById('total-val').innerText = '₹' + Math.round(finalTotal);
+            document.getElementById('cart-count').innerText = cart.length;
+        }
+
+        function showCartDetails() {
+            if(!cart.length) return alert("Empty Cart!");
+            let list = cart.map((i, idx) => `${idx+1}. ${i.name} [${i.qty}] = ₹${i.cost}`).join('\n');
+            if(confirm("Cart:\n" + list + "\n\nClear Cart?")) { cart = []; document.getElementById('c-discount').value = ''; updateCartUI(); }
+        }
+
+        // --- EXPENSES ---
+        function addEx() {
+            let note = document.getElementById('ex-note').value;
+            let amt = parseFloat(document.getElementById('ex-amt').value);
+            if(note && amt) {
+                expenses.push({note, amt, date: new Date().toLocaleDateString()});
+                localStorage.setItem('kl_expenses', JSON.stringify(expenses));
+                document.getElementById('ex-note').value = ''; document.getElementById('ex-amt').value = '';
+                updateReports(); alert("Expense Added");
+            }
+        }
+
+        // --- REPORTS ---
+        function updateReports() {
+            const h = history;
             const cash = h.filter(x => x.mode === 'Cash').reduce((s, i) => s + i.total, 0);
             const online = h.filter(x => x.mode === 'Online').reduce((s, i) => s + i.total, 0);
-            const due = h.filter(x => x.mode === 'Due').reduce((s, i) => s + i.total, 0);
-            const totalSales = cash + online + due;
-            const totalEx = ex.reduce((s, i) => s + i.amt, 0);
+            const totalEx = expenses.reduce((s, i) => s + i.amt, 0);
+            const netProfit = (cash + online) - totalEx;
 
-            document.getElementById('rep-profit').innerText = '₹' + (cash + online - totalEx);
+            document.getElementById('rep-profit').innerText = '₹' + netProfit;
             document.getElementById('rep-cash').innerText = '₹' + cash;
             document.getElementById('rep-online').innerText = '₹' + online;
-            document.getElementById('rep-due').innerText = '₹' + due;
-            document.getElementById('rep-ex').innerText = '₹' + totalEx;
-
-            document.getElementById('bar-cash').style.setProperty('--w', (totalSales ? (cash/totalSales)*100 : 0) + '%');
-            document.getElementById('bar-online').style.setProperty('--w', (totalSales ? (online/totalSales)*100 : 0) + '%');
-            document.getElementById('bar-due').style.setProperty('--w', (totalSales ? (due/totalSales)*100 : 0) + '%');
-
-            document.getElementById('history-list').innerHTML = h.map(x => `
-                <div class="bg-gray-50 p-4 rounded-3xl border shadow-sm text-left">
-                    <div class="flex justify-between items-start mb-1">
-                        <div><p class="font-black text-xs uppercase text-green-900">${x.name}</p><p class="text-[8px] text-gray-400 font-bold">${x.time} | ${x.mob}</p></div>
-                        <span class="font-black text-sm text-green-800">₹${x.total}</span>
-                    </div>
-                    <div class="flex justify-between items-center mt-2 border-t border-dashed pt-2">
-                        <p class="text-[8px] text-gray-500 italic truncate w-2/3 uppercase">${x.items}</p>
-                        <span class="text-[7px] font-black px-3 py-1 rounded-full uppercase ${x.mode=='Due'?'bg-red-100 text-red-600':'bg-green-100 text-green-700'}">${x.mode}</span>
-                    </div>
-                </div>`).join('');
+            document.getElementById('rep-ex-total').innerText = totalEx;
+            
+            let totalSales = cash + online;
+            document.getElementById('bar-cash').style.width = (totalSales ? (cash/totalSales)*100 : 0) + '%';
+            document.getElementById('bar-online').style.width = (totalSales ? (online/totalSales)*100 : 0) + '%';
         }
 
-        function addItem() {
-            const n = document.getElementById('n-name').value, p = document.getElementById('n-price').value;
-            if(n && p) {
-                let idx = menu.findIndex(x => x.name.toLowerCase() === n.toLowerCase());
-                if(idx > -1) menu[idx].price = parseFloat(p); else menu.push({id: Date.now(), name: n, price: parseFloat(p)});
-                localStorage.setItem('kl_menu', JSON.stringify(menu)); render(); alert("Menu Updated!");
+        // --- BILLING, WHATSAPP & PRINT ---
+        function processBill() {
+            if(!cart.length) return alert("Select items!");
+            
+            const subTotal = cart.reduce((s, i) => s + i.cost, 0);
+            const discount = parseFloat(document.getElementById('c-discount').value) || 0;
+            const total = Math.max(0, subTotal - discount);
+            const dt = new Date();
+            const dateStr = dt.toLocaleDateString('en-IN') + ' ' + dt.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
+            const cName = document.getElementById('c-name').value || 'Customer';
+            const cMob = document.getElementById('c-mob').value || '';
+
+            // 1. Populate Receipt (PURA NAAM)
+            document.getElementById('r-dt').innerText = dateStr + ' | ' + cName;
+            document.getElementById('r-items').innerHTML = cart.map(i => `<tr><td>${i.name}</td><td style="text-align:right">${i.qty}</td><td style="text-align:right">₹${i.cost}</td></tr>`).join('');
+            document.getElementById('r-sub').innerText = '₹' + subTotal;
+            document.getElementById('r-disc').innerText = '₹' + discount;
+            document.getElementById('r-total').innerText = '₹' + total;
+            document.getElementById('r-mode').innerText = payMode;
+
+            // 2. Save History
+            history.unshift({ id: Date.now(), date: dateStr, cName, cMob, mode: payMode, total, discount, items: cart.map(i => `${i.name}(${i.qty})`).join(', ') });
+            localStorage.setItem('kl_history_full', JSON.stringify(history));
+            
+            // 3. WhatsApp Integration (PURA NAAM)
+            if(cMob.length === 10) {
+                let waItems = cart.map((i, idx) => `${idx+1}. ${i.name} (${i.qty}) - ₹${i.cost}`).join('%0A');
+                let waText = `*KISHORI LAL SWEET HOUSE*%0A------------------%0A*Name:* ${cName}%0A*Date:* ${dateStr}%0A------------------%0A${waItems}%0A------------------%0A*Subtotal:* ₹${subTotal}%0A*Discount:* -₹${discount}%0A*GRAND TOTAL: ₹${total}*%0A------------------%0A_Thank you!_`;
+                
+                // Open WhatsApp immediately
+                window.open(`https://wa.me/91${cMob}?text=${waText}`, '_blank');
+            }
+
+            // 4. Print (Delayed to let WA open first)
+            setTimeout(() => {
+                window.print();
+                // Clear Data after print
+                cart = []; document.getElementById('c-discount').value = ''; updateCartUI();
+                document.getElementById('c-name').value = ''; document.getElementById('c-mob').value = '';
+                renderHistory(); updateReports();
+            }, 1000);
+        }
+
+        // --- MISC ---
+        function renderHistory() {
+            document.getElementById('history-list').innerHTML = history.map(h => `
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex justify-between border-b border-dashed pb-2 mb-2">
+                        <div><p class="text-[10px] font-bold text-gray-400">${h.date}</p><h3 class="font-black text-green-900 text-sm uppercase">${h.cName}</h3></div>
+                        <div class="text-right"><p class="text-lg font-black text-green-700">₹${h.total}</p><span class="text-[9px] px-2 py-0.5 rounded bg-gray-100 border">${h.mode}</span></div>
+                    </div>
+                    <p class="text-[10px] bg-gray-50 p-2 rounded text-gray-600 leading-tight">${h.items}</p>
+                </div>`).join('');
+        }
+        
+        // Custom Modal Logic
+        function openCustom(name, price) { 
+            document.getElementById('m-name-input').value = name; 
+            document.getElementById('m-rate').innerText = price; 
+            // Reset fields
+            document.getElementById('inp-weight').value = ''; 
+            document.getElementById('inp-price').value = '';
+            document.getElementById('custom-modal').classList.remove('hidden'); 
+            setTimeout(() => document.getElementById('custom-modal').classList.add('open'), 10); 
+            // Store current item context
+            window.currentItem = { name, price };
+        }
+        function closeModal() { document.getElementById('custom-modal').classList.remove('open'); setTimeout(() => document.getElementById('custom-modal').classList.add('hidden'), 300); }
+        
+        function addCustomToCart() {
+            let p = parseFloat(document.getElementById('inp-price').value), w = parseFloat(document.getElementById('inp-weight').value);
+            let n = document.getElementById('m-name-input').value;
+            if(p && w) { add(n, Math.round(p), w >= 1000 ? (w/1000).toFixed(2)+'kg' : w+'g'); closeModal(); }
+            else if(p) { add(n, Math.round(p), '1 Pc'); closeModal(); } 
+        }
+        function calcByWeight() { 
+            let w = parseFloat(document.getElementById('inp-weight').value); 
+            if(window.currentItem && window.currentItem.price > 0) {
+                 document.getElementById('inp-price').value = Math.round((window.currentItem.price/1000)*w);
+            }
+        } 
+        function calcByPrice() { 
+            let p = parseFloat(document.getElementById('inp-price').value); 
+            if(window.currentItem && window.currentItem.price > 0) {
+                document.getElementById('inp-weight').value = Math.round((p/window.currentItem.price)*1000);
             }
         }
 
-        function delItem(id) { menu = menu.filter(m => m.id !== id); localStorage.setItem('kl_menu', JSON.stringify(menu)); render(); }
-        function addEx() { const n = document.getElementById('ex-note').value, a = document.getElementById('ex-amt').value; if(n && a) { expenses.unshift({note: n, amt: parseFloat(a)}); localStorage.setItem('kl_expenses', JSON.stringify(expenses)); updateUI(); } }
-        function tab(t) { ['billing', 'history', 'report', 'settings'].forEach(v => { document.getElementById('view-' + v).classList.add('hidden'); document.getElementById('nav-' + v).classList.remove('active-nav'); document.getElementById('nav-' + v).classList.add('text-gray-400'); }); document.getElementById('view-' + t).classList.remove('hidden'); document.getElementById('nav-' + t).classList.add('active-nav'); updateUI(); }
+        function addNewItem() { const n = document.getElementById('n-name').value, p = document.getElementById('n-price').value; if(n && p) { menu.push({id: Date.now(), name: n, price: parseFloat(p)}); localStorage.setItem('kl_menu', JSON.stringify(menu)); render(); alert("Added!"); } }
+        function delItem(id) { if(confirm("Delete?")) { menu = menu.filter(m => m.id !== id); localStorage.setItem('kl_menu', JSON.stringify(menu)); render(); } }
+        function clearHistory() { if(confirm("DELETE ALL DATA?")) { localStorage.removeItem('kl_history_full'); localStorage.removeItem('kl_expenses'); history = []; expenses=[]; render(); } }
+        
+        function tab(t) {
+            ['billing', 'report', 'history', 'settings'].forEach(v => {
+                document.getElementById('view-' + v).classList.add('hidden');
+                document.getElementById('nav-' + v).classList.remove('active-nav');
+                document.getElementById('nav-' + v).classList.add('text-gray-400');
+            });
+            document.getElementById('view-' + t).classList.remove('hidden');
+            document.getElementById('nav-' + t).classList.add('active-nav');
+            document.getElementById('nav-' + t).classList.remove('text-gray-400');
+            if(t === 'report') updateReports();
+        }
+
         render();
     </script>
 </body>
